@@ -1825,8 +1825,16 @@
     }
 
     function fireEnemy(enemy) {
-      const target = player.group.position.clone();
-      target.y += player.vehicleMode ? 1.35 : 2.5;
+      const candidates = livingSquad();
+      if (!candidates.length) return;
+      let chosen = candidates[0];
+      let nearest = enemy.group.position.distanceToSquared(chosen.group.position);
+      for (const unit of candidates.slice(1)) {
+        const dist = enemy.group.position.distanceToSquared(unit.group.position);
+        if (dist < nearest) { nearest = dist; chosen = unit; }
+      }
+      const target = chosen.group.position.clone();
+      target.y += chosen.vehicleMode ? 1.35 : 2.5;
 
       const origin = enemy.group.position.clone();
       origin.y += enemy.boss ? 1.1 : 0.25;
