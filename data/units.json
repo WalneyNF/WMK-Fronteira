@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "notes": "Dados iniciais da V0.3. A configuração pode ser ajustada individualmente; aeronaves usam voo simplificado.",
+  "units": [
+    {
+      "id": "commander",
+      "name": "COMANDANTE",
+      "type": "mecha",
+      "health": 100,
+      "shield": 100,
+      "speed": 12.5,
+      "vehicleSpeed": 22,
+      "damageMultiplier": 1,
+      "model": "mecha",
+      "transform": true,
+      "cameraDistance": 12.4,
+      "aiRange": 60,
+      "description": "Unidade versátil transformável"
+    },
+    {
+      "id": "infantry",
+      "name": "SOLDADO",
+      "type": "soldier",
+      "health": 75,
+      "shield": 45,
+      "speed": 9,
+      "vehicleSpeed": 9,
+      "damageMultiplier": 0.72,
+      "model": "soldier",
+      "transform": false,
+      "cameraDistance": 7,
+      "aiRange": 45,
+      "description": "Infantaria de assalto em terceira pessoa"
+    },
+    {
+      "id": "hover",
+      "name": "TANQUE HOVER",
+      "type": "hover",
+      "health": 210,
+      "shield": 140,
+      "speed": 17,
+      "vehicleSpeed": 17,
+      "damageMultiplier": 1.7,
+      "model": "hover",
+      "transform": false,
+      "cameraDistance": 17,
+      "aiRange": 68,
+      "description": "Blindado de ataque e sustentação antigravidade"
+    },
+    {
+      "id": "fighter",
+      "name": "CAÇA",
+      "type": "fighter",
+      "health": 85,
+      "shield": 75,
+      "speed": 31,
+      "vehicleSpeed": 31,
+      "damageMultiplier": 1.2,
+      "model": "fighter",
+      "transform": false,
+      "cameraDistance": 21,
+      "aiRange": 80,
+      "description": "Caça veloz com movimento planar e altitude fixa inicial"
+    },
+    {
+      "id": "turret",
+      "name": "TORRE",
+      "type": "turret",
+      "health": 170,
+      "shield": 110,
+      "speed": 0,
+      "vehicleSpeed": 0,
+      "damageMultiplier": 1.45,
+      "model": "turret",
+      "transform": false,
+      "cameraDistance": 13,
+      "aiRange": 85,
+      "description": "Defesa estática com giro da mira"
+    }
+  ]
+}
