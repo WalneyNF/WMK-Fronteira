@@ -4,7 +4,7 @@ Jogo experimental de combate sci-fi em terceira pessoa, construído com **HTML, 
 
 **Autor e manutenção da versão WMK:** Walney Moreira Klein — walneyk@hotmail.com
 
-> Estado atual: protótipo V0.3 com esquadrão experimental multiclasse; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
+> Estado atual: protótipo V0.4 com esquadrão experimental multiclasse, armamento individual e ordens de IA; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
 
 ## História
 Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora** (defesa, ataques rápidos) ou **Coro Nébula** (invasão, disparos mais fortes). Destrua três relés, enfrente ondas de interceptores e derrote o **Arconte de Cerco**.
@@ -32,6 +32,7 @@ Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora**
 | Tab | Trocar entre unidades aliadas vivas |
 | 1 a 5 | Seleção direta de unidade |
 | F1 | Abrir/fechar painel de seleção |
+| F2 | Alternar ordens dos aliados: seguir, defender ou atacar |
 | C / X | Subir / descer quando assumir o caça |
 | Shift | Impulso |
 | E | Cúpula defensiva |
@@ -77,3 +78,9 @@ A prioridade é manter a jogabilidade estável e criar um sistema genérico de u
 - O caça tem altitude controlável, mas ainda não possui física de voo, estol, decolagem/pouso ou combate aéreo dedicado.
 - A torre é uma unidade estática com disparo por mira da câmera; ainda não há turret tracking e rotação automática de torre independente.
 - A versão requer validação manual no navegador: a presença das funções no repositório não comprova a ausência de problemas em execução.
+
+## V0.4 — armas e ordens de esquadrão
+
+Cada classe possui armamento independente via `data/units.json`. Os aliados usam as mesmas características de tiro, porém com dano reduzido pela IA. As ordens **seguir**, **defender** e **atacar** alteram o deslocamento básico dos bots móveis; a torre não se desloca. A inteligência artificial ainda usa decisões simples por distância e não possui navegação com desvio de obstáculos.
+
+**Teste recomendado:** com a campanha iniciada, pressione `F2` várias vezes, alterne entre as cinco classes e observe cadência e calor no HUD. Verifique também a persistência de HP e escudo ao alternar unidades. É uma versão experimental; nenhuma suíte de testes de navegador foi executada nesta atualização.
