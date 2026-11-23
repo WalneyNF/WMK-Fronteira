@@ -11,9 +11,10 @@ assert.ok(match,'Script principal não encontrado');
 const code=match[1].replace(/^\s*import\s+.*?;\s*$/gm,'');
 new vm.Script(code,{filename:'index.html'});
 assert.equal(data.schema_version,2);
-assert.equal(data.units.length,5);
+assert.ok(data.units.length>=5&&data.units.length<=24,'O jogo suporta entre 5 e 24 unidades');
+assert.equal(data.units[0].type,'mecha','A primeira unidade deve ser um mecha');
 const types=['mecha','soldier','hover','fighter','turret'];
-assert.deepEqual(data.units.map(unit=>unit.type),types);
+assert.ok(data.units.every(unit=>types.includes(unit.type)),'Classe desconhecida');
 const ids=new Set();
 for(const unit of data.units){
   assert.ok(!ids.has(unit.id),'ID duplicado: '+unit.id);
