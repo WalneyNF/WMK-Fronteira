@@ -32,9 +32,9 @@ for(const name of ['loadUnits','fireUnitWeapon','fireWeapon','squadAI','cycleSqu
   assert.ok(html.includes('function '+name+'(')||html.includes('async function '+name+'('),'Função ausente: '+name);
 const mapEditor=readFileSync(new URL('../map-editor.html',import.meta.url),'utf8');
 const mapJson=JSON.parse(readFileSync(new URL('../data/maps/khepri9.json',import.meta.url),'utf8'));
-const mapScript=mapEditor.match(/<script type="module">([\\s\\S]*?)<\\/script>/);
+const mapScript=mapEditor.match(/<script type="module">([\s\S]*?)<\/script>/);
 assert.ok(mapScript,'Editor de mapas: script não encontrado');
-new vm.Script(mapScript[1].replace(/^\\s*import\\s+.*?;\\s*$/gm,''),{filename:'map-editor.html'});
+new vm.Script(mapScript[1].replace(/^\s*import\s+.*?;\s*$/gm,''),{filename:'map-editor.html'});
 assert.equal(mapJson.schema_version,1);
 assert.ok(Array.isArray(mapJson.objects)&&mapJson.objects.length>0);
 const mapIds=new Set();
