@@ -4,7 +4,7 @@ Jogo experimental de combate sci-fi em terceira pessoa, construído com **HTML, 
 
 **Autor e manutenção da versão WMK:** Walney Moreira Klein — walneyk@hotmail.com
 
-> Estado atual: protótipo V0.5 com editor de unidades e esquadrão experimental multiclasse, armamento individual e ordens de IA; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
+> Estado atual: protótipo V0.6 com editor de mapas 3D, editor de unidades e esquadrão experimental multiclasse, armamento individual e ordens de IA; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
 
 ## História
 Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora** (defesa, ataques rápidos) ou **Coro Nébula** (invasão, disparos mais fortes). Destrua três relés, enfrente ondas de interceptores e derrote o **Arconte de Cerco**.
@@ -48,6 +48,8 @@ A primeira abertura requer conexão à internet para carregar o **Three.js 0.160
 ## Arquivos
 - `index.html` — jogo em desenvolvimento, concentrado em um arquivo.
 - `editor.html` — editor visual independente com painéis móveis, atributos, armas e prévia 2D conceitual.
+- `map-editor.html` — editor 3D de mapas com gizmos, objetos, GLB e exportação JSON.
+- `data/maps/khepri9.json` — mapa de exemplo carregado no início de cada partida.
 - `pesquisa.html` — estudo de referências e concorrentes.
 - `roadmap.html` — plano de versões e prioridades.
 
@@ -110,3 +112,35 @@ Abra [editor.html](editor.html) no mesmo servidor HTTP do jogo. O editor permite
 O jogo suporta **5 a 24 unidades no catálogo**, exige que a primeira seja mecha e que todos os IDs sejam únicos. No editor é possível duplicar além do limite, mas o jogo rejeitará catálogos fora dessas regras; não são mudanças em tempo real na partida. O desenho do editor é uma **prévia 2D conceitual**, não renderização real do modelo GLB. Os painéis têm posição salva no navegador ao serem arrastados; dimensões alteradas por redimensionamento podem precisar ser salvas novamente ao mover o painel.
 
 **ZIP da versão corrente:** [Baixar branch main do GitHub](https://github.com/WalneyNF/WMK-Fronteira/archive/refs/heads/main.zip). O arquivo é produzido pelo próprio GitHub a partir dos arquivos publicados na branch principal.
+
+## V0.6 — Editor de mapas 3D
+
+Abra `http://localhost:8000/map-editor.html`. A ferramenta usa Three.js, OrbitControls e TransformControls, oferece painéis arrastáveis/redimensionáveis, seleção por clique, modos de movimentação, rotação, escala, duplicação e exclusão de objetos. Inclui edifício, rocha, torre, plataforma e importação **GLB apenas para prévia de sessão**.
+
+### Teclas
+
+| Tecla | Operação |
+| --- | --- |
+| G | Mover objeto selecionado |
+| R | Rotacionar |
+| S | Escalonar |
+| Ctrl+D | Duplicar objeto |
+| Delete | Excluir objeto |
+| Mouse | Seleção, órbita e gizmos |
+
+### Usar o mapa no jogo
+
+1. Abra o editor e modifique os objetos.
+2. Clique em **Exportar mapa** e salve como `khepri9.json`.
+3. Substitua `data/maps/khepri9.json` pelo arquivo exportado.
+4. Recarregue `index.html` e inicie uma nova campanha.
+
+O botão **Salvar layout** também persiste o mapa e o posicionamento dos painéis em `localStorage` do navegador, exclusivamente para o editor. A partida carrega o arquivo JSON do projeto, **não** o armazenamento local.
+
+Modelos GLB de arquivos locais não são embutidos no JSON: copie seus modelos para `assets/models/` e mantenha um caminho como `assets/models/modelo.glb` no objeto. O jogo tentará carregar esses arquivos durante a montagem do cenário. Sem o arquivo, o modelo não aparece e o navegador pode exibir erro 404.
+
+**Limitações atuais:** objetos adicionados são cenário visual e ainda não têm colisão física, persistência de estado em partidas nem sistema de missões. O cenário procedural existente continua sendo montado junto do mapa JSON; portanto alguns objetos podem se sobrepor. Painéis móveis podem sair da área visível caso arrastados além dos limites. Editor de GLB e carregamento de arquivos externos precisam de melhorias de segurança, validação e experiência de uso antes de uma versão estável.
+
+### ZIP mais recente
+
+O GitHub disponibiliza um pacote da branch principal em https://github.com/WalneyNF/WMK-Fronteira/archive/refs/heads/main.zip . O pacote é gerado pelo GitHub e inclui os arquivos atualmente publicados. Recomenda-se um servidor HTTP local para que importações ES Modules e leitura de JSON funcionem.
