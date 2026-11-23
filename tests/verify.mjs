@@ -48,5 +48,16 @@ for(const obj of mapJson.objects){
 }
 assert.ok(html.includes('href="map-editor.html"'));
 assert.ok(html.includes('function addMapElements()'));
-console.log('OK: JavaScript válido, 5 unidades, 5 armas, editor de mapas e JSON de cenário.');
+const missionEditor=readFileSync(new URL('../mission-editor.html',import.meta.url),'utf8');
+const mission=JSON.parse(readFileSync(new URL('../data/missions/khepri9.json',import.meta.url),'utf8'));
+const missionScript=missionEditor.match(/<script>([\s\S]*?)<\/script>/);
+assert.ok(missionScript,'Editor de missões: script não encontrado');
+new vm.Script(missionScript[1],{filename:'mission-editor.html'});
+assert.equal(mission.schema_version,1);
+assert.ok(mission.objectives.length>0);
+assert.ok(mission.objectives.every(o=>['destroy_relays','defeat_boss'].includes(o.type)));
+assert.ok(html.includes('function moveUnitWithCollision('));
+assert.ok(html.includes('function loadMissionData('));
+assert.ok(html.includes('href="mission-editor.html"'));
+console.log('OK: código válido, armas, mapa, colisões e editor de missões JSON.');
 console.log('Atenção: não testa renderização WebGL, física, colisões nem jogabilidade no navegador.');
