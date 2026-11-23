@@ -767,6 +767,7 @@
 
         <div class="menu-actions">
           <button id="startBtn" class="primary" type="button">Iniciar campanha</button>
+          <a class="secondary" href="editor.html" style="text-decoration:none">Editor de unidades V0.5</a>
 
           <label class="secondary file-button">
             Importar modelo .GLB
@@ -1657,8 +1658,10 @@
         const response=await fetch("./data/units.json",{cache:"no-cache"});
         if(!response.ok)throw Error("HTTP "+response.status);
         const data=await response.json();
-        if(!Array.isArray(data.units)||data.units.length!==5||
-          data.units.some(u=>!defaultUnits.some(d=>d.id===u.id&&d.type===u.type)||
+        if(!Array.isArray(data.units)||data.units.length<5||data.units.length>24||
+          data.units[0].type!=="mecha"||new Set(data.units.map(u=>u.id)).size!==data.units.length||
+          data.units.some(u=>typeof u.id!=="string"||!/^[a-zA-Z0-9_-]{1,40}$/.test(u.id)||
+            typeof u.name!=="string"||!["mecha","soldier","hover","fighter","turret"].includes(u.type)||
             !["health","shield","speed","damageMultiplier","cameraDistance","aiRange"].every(k=>Number.isFinite(u[k])&&u[k]>=0&&u[k]<=1000)||!validWeapon(u.weapon)))
           throw Error("Configuração inválida");
         unitCatalog=data.units;
@@ -1710,7 +1713,7 @@
     }
     function createUnit(cfg,index){
       const group=new THREE.Group();
-      const spots=[[-9,36],[9,36],[-13,43],[14,44]][index-1]||[0,40];
+      const spots=[[-9,36],[9,36],[-13,43],[14,44]][index-1]||[(index%6-2.5)*9,42+Math.floor(index/6)*8];
       group.position.set(spots[0],cfg.type==="fighter"?8:0,spots[1]);
       const mechModel=classModel(cfg),vehicleModel=createVehicle(currentFaction);
       vehicleModel.visible=false;
