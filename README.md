@@ -4,13 +4,14 @@ Jogo experimental de combate sci-fi em terceira pessoa, construído com **HTML, 
 
 **Autor e manutenção da versão WMK:** Walney Moreira Klein — walneyk@hotmail.com
 
-> Estado atual: protótipo jogável fornecido pelo mantenedor; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
+> Estado atual: protótipo com esquadrão experimental de três mechas; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
 
 ## História
 Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora** (defesa, ataques rápidos) ou **Coro Nébula** (invasão, disparos mais fortes). Destrua três relés, enfrente ondas de interceptores e derrote o **Arconte de Cerco**.
 
 ## Recursos presentes no código inicial
 - Duas facções com estatísticas distintas;
+- Esquadrão experimental com três mechas aliados: tecla **Tab** troca a unidade controlada, aliados não controlados atiram por IA simples, HP individual e transferência automática quando a unidade ativa é destruída;
 - Mecha transformável em veículo; movimento em terceira pessoa e mira com mouse;
 - Arma de pulso com aquecimento, escudo regenerativo, impulso e cúpula defensiva;
 - Três relés objetivos, inimigos, ondas, chefe, pontuação e tela de resultados;
@@ -24,6 +25,7 @@ Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora**
 | Mouse | Mira |
 | Clique esquerdo | Atirar |
 | Q | Alternar mecha / veículo |
+| Tab | Trocar entre mechas aliados vivos |
 | Shift | Impulso |
 | E | Cúpula defensiva |
 | Esc | Pausar |
@@ -41,10 +43,10 @@ A primeira abertura requer conexão à internet para carregar o **Three.js 0.160
 - `roadmap.html` — plano de versões e prioridades.
 
 ## Próximos passos
-1. Testar o fluxo inteiro no navegador e corrigir defeitos documentados.
+1. Testar o fluxo inteiro no navegador, especialmente o novo sistema de troca entre mechas, e corrigir defeitos documentados.
 2. Modularizar código (entrada, combate, entidades, IA, interface e carregamento).
 3. Externalizar configurações em JSON validado.
-4. Criar hangar, editor de missões/mapas, modelos independentes e progressão.
+4. Expandir os três mechas para classes diferentes usando arquivos JSON por unidade; depois criar hangar, editor de missões/mapas e progressão.
 
 Consulte [pesquisa de referências](pesquisa.html) e [roadmap](roadmap.html).
 
