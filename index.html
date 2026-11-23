@@ -831,6 +831,7 @@
     <div id="unitSelector" class="hidden" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);padding:18px;border:1px solid #56d8f1;border-radius:12px;width:min(650px,94vw);z-index:8;pointer-events:auto;background:#081827">
       <h2 style="margin-top:0;font-size:18px">UNIDADES DISPONÍVEIS · F1 fechar</h2>
       <div id="unitCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"></div>
+      <p style="font-size:12px;color:#b7d9e6">F2: alternar ordens SEGUIR, DEFENDER ou ATACAR.</p>
     </div>
 
     <div class="hud-bottom">
@@ -1007,6 +1008,7 @@
     let squad = [];
     let squadPanelOpen = false;
     let unitCatalog = null;
+    let squadOrder = "seguir";
     let enemies = [];
     let relays = [];
     let shots = [];
@@ -1616,6 +1618,7 @@
       player.config=first;player.unitName=first.name;player.unitId=first.id;
       player.health=first.health;player.maxHealth=first.health;
       player.shield=first.shield;player.maxShield=first.shield;
+      player.home=player.group.position.clone();
       squad=[player];world.add(player.group);
       (unitCatalog||defaultUnits).slice(1).forEach((cfg,i)=>squad.push(createUnit(cfg,i+1)));
       if (assetTemplate) installImportedModel();
@@ -1637,6 +1640,18 @@
       {id:"fighter",name:"CAÇA",type:"fighter",health:85,shield:75,speed:31,damageMultiplier:1.2,transform:false,cameraDistance:21,aiRange:80},
       {id:"turret",name:"TORRE",type:"turret",health:170,shield:110,speed:0,damageMultiplier:1.45,transform:false,cameraDistance:13,aiRange:85}
     ];
+    const defaultWeapons={
+      commander:{label:"CANHÃO DE PULSO",damage:2.6,cooldown:.16,heat:8.5,shotSpeed:57,pellets:1,spread:0,range:100},
+      infantry:{label:"FUZIL PLASMA",damage:2,cooldown:.24,heat:5,shotSpeed:64,pellets:1,spread:.012,range:75},
+      hover:{label:"CANHÃO PESADO",damage:8.5,cooldown:1.15,heat:25,shotSpeed:47,pellets:1,spread:.006,range:110},
+      fighter:{label:"CANHÕES DUPLOS",damage:3.2,cooldown:.23,heat:10,shotSpeed:82,pellets:2,spread:.028,range:130},
+      turret:{label:"METRALHADORA",damage:2.8,cooldown:.11,heat:4.2,shotSpeed:69,pellets:1,spread:.015,range:120}
+    };
+    function validWeapon(w){
+      return !!w && typeof w.label==="string" &&
+        ["damage","cooldown","heat","shotSpeed","pellets","spread","range"].every(k=>Number.isFinite(w[k])&&w[k]>=0&&w[k]<=1000) &&
+        w.cooldown>=.05 && w.shotSpeed>0 && Number.isInteger(w.pellets) && w.pellets>=1 && w.pellets<=5;
+    }
     async function loadUnits(){
       try{
         const response=await fetch("./data/units.json",{cache:"no-cache"});
@@ -1644,13 +1659,30 @@
         const data=await response.json();
         if(!Array.isArray(data.units)||data.units.length!==5||
           data.units.some(u=>!defaultUnits.some(d=>d.id===u.id&&d.type===u.type)||
-            !["health","shield","speed","damageMultiplier","cameraDistance","aiRange"].every(k=>Number.isFinite(u[k])&&u[k]>=0&&u[k]<=1000)))
+            !["health","shield","speed","damageMultiplier","cameraDistance","aiRange"].every(k=>Number.isFinite(u[k])&&u[k]>=0&&u[k]<=1000)||!validWeapon(u.weapon)))
           throw Error("Configuração inválida");
         unitCatalog=data.units;
       }catch(error){
         console.warn("data/units.json indisponível; usando padrão",error);
-        unitCatalog=defaultUnits;
+        unitCatalog=defaultUnits.map(u=>({...u,weapon:defaultWeapons[u.id]}));
       }
+    }
+    function weaponFor(unit){return unit.config.weapon||defaultWeapons[unit.config.id]||defaultWeapons.commander;}
+    function fireUnitWeapon(unit,direction,isAI=false){
+      const w=weaponFor(unit);
+      if(unit.health<=0 || unit.fireCooldown>0 || unit.heat+w.heat>102)return false;
+      const forward=new THREE.Vector3(Math.sin(unit.yaw),0,-Math.cos(unit.yaw));
+      const origin=unit.group.position.clone();
+      origin.y+=unit.config.type==="fighter"?.45:unit.config.type==="soldier"?1.7:unit.config.type==="hover"?2.1:unit.config.type==="turret"?1.85:unit.vehicleMode?1.35:3;
+      origin.addScaledVector(forward,unit.config.type==="fighter"?2:1.2);
+      for(let i=0;i<w.pellets;i++){
+        const spread=(i-(w.pellets-1)/2)*w.spread;
+        const aim=direction.clone().applyAxisAngle(up,spread+(isAI?0:(Math.random()-.5)*w.spread*.3)).normalize();
+        addShot(origin,aim,false,w.damage*unit.config.damageMultiplier*(isAI?.75:1),w.shotSpeed);
+      }
+      unit.fireCooldown=w.cooldown*(unit.vehicleMode?.8:1);
+      unit.heat=Math.min(100,unit.heat+w.heat);
+      return true;
     }
     function classModel(cfg){
       if(cfg.type==="mecha")return createMech(currentFaction);
@@ -1687,7 +1719,7 @@
         new THREE.MeshBasicMaterial({color:teams[currentFaction].glow}));
       guardVisual.visible=false;group.add(guardVisual);
       world.add(group);
-      return {config:cfg,unitId:cfg.id,unitName:cfg.name,group,mechModel,vehicleModel,guardVisual,
+      return {config:cfg,unitId:cfg.id,unitName:cfg.name,group,home:group.position.clone(),mechModel,vehicleModel,guardVisual,
         customModel:null,mixer:null,yaw:0,vehicleMode:false,health:cfg.health,maxHealth:cfg.health,
         shield:cfg.shield,maxShield:cfg.shield,heat:0,fireCooldown:0,dashTime:0,dashCooldown:0,
         guardTime:0,guardCooldown:0,lastDamage:-10,moveBlend:0};
@@ -1869,39 +1901,11 @@
       });
     }
 
-    function fireWeapon() {
-      if (!player || player.fireCooldown > 0 || player.heat >= 98) return;
-
-      const team = teams[currentFaction];
-      const direction = new THREE.Vector3();
+    function fireWeapon(){
+      if(!player || state!=="playing" || squadPanelOpen)return;
+      const direction=new THREE.Vector3();
       camera.getWorldDirection(direction).normalize();
-
-      const forward = new THREE.Vector3(
-        Math.sin(player.yaw),
-        0,
-        -Math.cos(player.yaw)
-      );
-
-      const origin = player.group.position.clone();
-      origin.y += player.vehicleMode ? 1.35 : 3.0;
-      origin.addScaledVector(forward, 1.55);
-
-      const vehicleFactor = (player.vehicleMode ? .82 : 1) * player.config.damageMultiplier;
-
-      addShot(
-        origin,
-        direction,
-        false,
-        team.damage * vehicleFactor,
-        57,
-        false
-      );
-
-      player.fireCooldown = team.cooldown * (player.vehicleMode ? 0.76 : 1);
-      player.heat = Math.min(
-        100,
-        player.heat + (player.vehicleMode ? 6.5 : 8.5)
-      );
+      fireUnitWeapon(player,direction,false);
     }
 
     function fireEnemy(enemy) {
@@ -1964,20 +1968,41 @@
         unit.fireCooldown=Math.max(0,unit.fireCooldown-dt);
         unit.heat=Math.max(0,unit.heat-dt*22);
         if(gameTime-unit.lastDamage>2.7)unit.shield=Math.min(unit.maxShield||100,unit.shield+dt*9);
-        let target=null,best=60;
+        let target=null,closest=unit.config.aiRange||60;
         for(const enemy of enemies){
-          const distance=unit.group.position.distanceTo(enemy.group.position);
-          if(distance<best){best=distance;target=enemy}
+          if(enemy.hp<=0)continue;
+          const dist=unit.group.position.distanceTo(enemy.group.position);
+          if(dist<closest){closest=dist;target=enemy;}
+        }
+        const home=unit.home||unit.group.position;
+        let destination=null;
+        if(squadOrder==="seguir"&&unit.group.position.distanceTo(player.group.position)>13)destination=player.group.position;
+        if(squadOrder==="defender"&&unit.group.position.distanceTo(home)>5)destination=home;
+        if(squadOrder==="atacar"&&target&&closest>22)destination=target.group.position;
+        if(destination&&unit.config.speed>0){
+          const delta=destination.clone().sub(unit.group.position);delta.y=0;
+          if(delta.lengthSq()>.01){
+            unit.group.position.addScaledVector(delta.normalize(),unit.config.speed*dt*.55);
+            unit.group.position.x=THREE.MathUtils.clamp(unit.group.position.x,-96,96);
+            unit.group.position.z=THREE.MathUtils.clamp(unit.group.position.z,-102,72);
+          }
         }
         if(!target)continue;
-        unit.yaw=Math.atan2(target.group.position.x-unit.group.position.x,unit.group.position.z-target.group.position.z);
+        const delta=target.group.position.clone().sub(unit.group.position);
+        unit.yaw=Math.atan2(delta.x,-delta.z);
         unit.group.rotation.y=unit.yaw;
-        if(unit.fireCooldown<=0&&unit.heat<92){
-          const origin=unit.group.position.clone().add(new THREE.Vector3(0,2.5,0));
-          addShot(origin,target.group.position.clone().sub(origin).normalize(),false,teams[currentFaction].damage*.7,48);
-          unit.fireCooldown=1.3;unit.heat+=10;
+        if(unit.fireCooldown<=0){
+          const origin=unit.group.position.clone();
+          origin.y+=unit.config.type==="fighter"?.45:unit.config.type==="soldier"?1.7:2.3;
+          fireUnitWeapon(unit,target.group.position.clone().sub(origin).normalize(),true);
         }
       }
+    }
+    function cycleSquadOrder(){
+      const orders=["seguir","defender","atacar"];
+      squadOrder=orders[(orders.indexOf(squadOrder)+1)%orders.length];
+      showToast("ORDEM: "+squadOrder.toUpperCase());
+      updateHud();
     }
     function damageSquadUnit(unit,amount){
       if(!unit||unit.health<=0||state!=="playing")return;
@@ -2419,7 +2444,7 @@
 
       ui.heatFill.classList.toggle("hot", player.heat > 72);
 
-      ui.squadHud.textContent = "TAB: PRÓXIMA · F1: SELEÇÃO | " + squad.map(u=>(u===player?"▶ ":"")+u.unitName+" "+Math.ceil(u.health)+"HP").join(" · ");
+      ui.squadHud.textContent = "TAB PRÓXIMA · F1 SELEÇÃO · F2 "+squadOrder.toUpperCase()+" | " + squad.map(u=>(u===player?"▶ ":"")+u.unitName+" "+Math.ceil(u.health)+"HP").join(" · ");
       ui.modeText.textContent = player.config.type==="mecha" ? (player.vehicleMode?"FORMA: VEÍCULO":"FORMA: MECHA") : "CLASSE: "+player.config.name;
 
       const dashText = player.dashCooldown <= 0
@@ -2430,7 +2455,7 @@
         ? "cúpula pronta"
         : `cúpula ${player.guardCooldown.toFixed(1)}s`;
 
-      ui.abilityText.textContent = `Shift: ${dashText} · E: ${guardText}` +
+      ui.abilityText.textContent = weaponFor(player).label + " · " + `Shift: ${dashText} · E: ${guardText}` +
         (player.config.type==="fighter" ? " · C subir / X descer" : "");
       ui.scoreText.textContent = `PONTOS ${String(score).padStart(6, "0")}`;
 
@@ -2542,6 +2567,7 @@
       buildWorld();
       state = "playing";
       squadPanelOpen=false;ui.unitSelector.classList.add("hidden");
+      squadOrder="seguir";
       clearInput();
 
       requestMouseLock();
@@ -2674,7 +2700,7 @@
 
     window.addEventListener("keydown", (event) => {
       if (
-        ["Space", "Tab", "F1", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)
+        ["Space", "Tab", "F1", "F2", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)
       ) {
         event.preventDefault();
       }
@@ -2684,6 +2710,7 @@
       if (state !== "playing" || event.repeat) return;
 
       if(event.code==="F1"){toggleSquadPanel();return;}
+      if(event.code==="F2"){event.preventDefault();if(!squadPanelOpen)cycleSquadOrder();return;}
       if(squadPanelOpen)return;
       if (event.code === "Tab") selectNextUnit();
       const unitIndex=["Digit1","Digit2","Digit3","Digit4","Digit5"].indexOf(event.code);
