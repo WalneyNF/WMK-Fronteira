@@ -1,0 +1,215 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WMK Fronteira · Editor de Mapas V0.6</title><style>:root{color-scheme:dark;--bg:#07101c;--panel:#11243a;--border:#2c516a;--text:#e7f5ff;--accent:#62e1f3}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:13px system-ui,Segoe UI,sans-serif;overflow:hidden}header{height:54px;background:#0a1a2b;border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:16px;color:var(--accent);margin:0}h2{font-size:13px;color:var(--accent);margin:0}button,a.action,label.file{font:inherit;cursor:pointer;background:#193b52;border:1px solid #47718a;color:white;border-radius:6px;padding:7px 9px;text-decoration:none;display:inline-block}button:hover,a.action:hover{border-color:var(--accent)}button.on{background:#126e89}button:disabled{opacity:.45}button.danger{background:#49303c}input,select,textarea{width:100%;font:inherit;background:#071725;color:white;border:1px solid #385f75;border-radius:5px;padding:6px}label{font-size:11px;color:#acc2d0;display:block;margin-top:8px;margin-bottom:3px}#workspace{position:relative;height:calc(100vh - 80px);overflow:hidden}#viewport{position:absolute;inset:0;width:100%;height:100%;display:block}#panels{position:absolute;inset:0;pointer-events:none}.panel{position:absolute;pointer-events:auto;background:rgba(8,22,36,.96);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 28px #0008;overflow:auto;resize:both;min-width:215px;min-height:120px}.bar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#1b3549;cursor:move;user-select:none;touch-action:none;z-index:1}.body{padding:11px}.group{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.group>button{flex:1}.item{width:100%;display:block;text-align:left;margin:5px 0}.selected{border-color:var(--accent);background:#145671}.row{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.help{color:#9db4c6;font-size:12px;line-height:1.55}.note{padding:10px;border-left:2px solid var(--accent);background:#102c40;color:#b7cde0;font-size:11px}#objects{left:12px;top:12px;width:250px;height:490px}#properties{right:12px;top:12px;width:277px;height:580px}#assets{left:12px;bottom:12px;width:250px;height:200px}#status{height:26px;background:#122437;padding:5px 12px;font-size:11px;color:#8ed7e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}footer{font-size:10px;color:#7ea6b6;margin:8px 0}#credit{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:#07101caa;padding:4px 9px;border-radius:5px;pointer-events:none}@media(max-width:830px){header{height:auto;flex-wrap:wrap}#workspace{height:calc(100vh - 120px)}#objects{width:210px}#properties{width:220px}}</style><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script></head><body>
+<header><h1>WMK FRONTEIRA · MAP EDITOR V0.6</h1><div class="group" style="margin:0"><button id="move">Mover (G)</button><button id="rotate">Rotacionar (R)</button><button id="scale">Escala (S)</button><button id="duplicate">Duplicar (Ctrl+D)</button><button id="delete" class="danger">Excluir (Del)</button><button id="save">Salvar layout</button><button id="export">Exportar mapa</button><label class="file" style="margin:0">Importar JSON<input type="file" id="importMap" accept=".json,application/json" hidden></label><a class="action" href="index.html">Jogo</a></div></header>
+<div id="workspace"><canvas id="viewport"></canvas><div id="panels">
+<section class="panel" id="objects"><div class="bar"><h2>OBJETOS DO MAPA</h2><span>⋮⋮</span></div><div class="body"><div id="list"></div><div class="group"><button id="addBuilding">+ Edifício</button><button id="addRock">+ Rocha</button><button id="addTower">+ Torre</button><button id="addPlatform">+ Plataforma</button></div><p class="help">Clique no objeto para selecioná-lo. Use os gizmos ou altere coordenadas no painel à direita.</p></div></section>
+<section class="panel" id="properties"><div class="bar"><h2>TRANSFORMAÇÕES</h2><span>⋮⋮</span></div><div class="body" id="fields"><p>Selecione um objeto no cenário.</p></div></section>
+<section class="panel" id="assets"><div class="bar"><h2>MODELOS E ARQUIVOS</h2><span>⋮⋮</span></div><div class="body"><label class="file">Visualizar GLB local<input id="glb" type="file" accept=".glb,model/gltf-binary" hidden></label><div id="assetName" class="help">Os GLBs locais são visualizados nesta sessão, mas não são incorporados ao JSON exportado. Aponte o caminho do asset pelo campo de propriedades.</div><p class="note">Exportar o JSON não exporta arquivos GLB. Mantenha os modelos em <code>assets/models/</code> com os caminhos informados no objeto.</p></div></section>
+</div><div id="credit">© 2026 Walney Moreira Klein · walneyk@hotmail.com · MIT</div></div><div id="status" role="status">Editor iniciado</div>
+<script type="module">
+import * as THREE from "three";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+import {TransformControls} from "three/addons/controls/TransformControls.js";
+import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
+const $=id=>document.getElementById(id);
+const scene=new THREE.Scene();scene.background=new THREE.Color("#091521");
+const camera=new THREE.PerspectiveCamera(55,1,.1,1000);camera.position.set(70,75,90);
+const renderer=new THREE.WebGLRenderer({canvas:$("viewport"),antialias:true});
+renderer.setPixelRatio(Math.min(1.5,devicePixelRatio||1));renderer.outputColorSpace=THREE.SRGBColorSpace;
+const ambient=new THREE.HemisphereLight(0xaddfff,0x192536,2);scene.add(ambient);
+const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(28,70,25);scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshStandardMaterial({color:0x142434,roughness:.88}));
+ground.rotation.x=-Math.PI/2;ground.position.y=-.05;scene.add(ground);
+const grid=new THREE.GridHelper(220,44,0x3c7f9b,0x1c4053);scene.add(grid);
+const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.target.set(0,0,0);
+const gizmo=new TransformControls(camera,renderer.domElement);scene.add(gizmo);
+gizmo.addEventListener("dragging-changed",event=>orbit.enabled=!event.value);
+gizmo.addEventListener("objectChange",()=>{if(selected)syncObject(selected);drawFields(false)});
+const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
+const objects=new Map();let selected=null;let mapName="Mapa WMK",mapId="wmk-map",idSeed=1;
+function status(message){$("status").textContent=message}
+function validVector(v){return Array.isArray(v)&&v.length===3&&v.every(n=>typeof n==="number"&&Number.isFinite(n)&&Math.abs(n)<=10000)}
+function validObject(obj){return !!obj&&typeof obj.id==="string"&&/^[a-zA-Z0-9_-]{1,60}$/.test(obj.id)&&typeof obj.name==="string"&&obj.name.length<=100&&["building","rock","tower","platform","glb"].includes(obj.kind)&&validVector(obj.position)&&validVector(obj.rotation)&&validVector(obj.scale)&&obj.scale.every(n=>n>=.05&&n<=100)&&(!obj.asset||typeof obj.asset==="string"&&obj.asset.length<300&&!obj.asset.includes("..")&&!/^https?:/i.test(obj.asset))&&(/^#[0-9a-f]{6}$/i.test(obj.color||"#32768d"))}
+function shape(item){
+ const material=new THREE.MeshStandardMaterial({color:item.color||"#3d8da7",metalness:.4,roughness:.47});
+ let geometry;
+ if(item.kind==="rock")geometry=new THREE.DodecahedronGeometry(3,0);
+ else if(item.kind==="tower")geometry=new THREE.CylinderGeometry(.9,1.5,11,8);
+ else if(item.kind==="platform")geometry=new THREE.CylinderGeometry(7,8,.6,24);
+ else geometry=new THREE.BoxGeometry(8,8,8);
+ const mesh=new THREE.Mesh(geometry,material);mesh.position.y=item.kind==="building"?4:item.kind==="rock"?2:item.kind==="tower"?5.5:.3;
+ const root=new THREE.Group();root.add(mesh);
+ if(item.kind==="glb"){mesh.visible=false}
+ return root;
+}
+function applyTransform(root,item){
+ root.position.fromArray(item.position);root.rotation.set(...item.rotation);root.scale.fromArray(item.scale);
+}
+function objectData(id,kind="building",name=null){
+ return {id,kind,name:name||"Novo "+kind,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:"#34839f"};
+}
+function addItem(item){
+ if(!validObject(item)||objects.has(item.id))throw new Error("Objeto inválido ou ID duplicado");
+ const root=shape(item);root.userData.mapId=item.id;applyTransform(root,item);scene.add(root);
+ objects.set(item.id,{data:structuredClone(item),root});
+ if(item.kind==="glb"&&item.asset)loadAsset(root,item.asset);
+ listObjects();return root;
+}
+const loader=new GLTFLoader();
+function loadAsset(root,path){
+ if(!/^assets\/models\/[a-zA-Z0-9._/-]+\.glb$/i.test(path)||path.includes("..")){status("Caminho GLB inválido; use assets/models/arquivo.glb");return}
+ loader.load(path,gltf=>{
+   root.children.forEach(x=>x.visible=false);
+   root.add(gltf.scene);status("Modelo carregado: "+path);
+ },undefined,e=>status("GLB não encontrado: "+path));
+}
+function syncObject(entry){
+ entry.data.position=entry.root.position.toArray();
+ entry.data.rotation=[entry.root.rotation.x,entry.root.rotation.y,entry.root.rotation.z];
+ entry.data.scale=entry.root.scale.toArray();
+}
+function listObjects(){
+ const node=$("list");node.replaceChildren();
+ for(const [id,entry] of objects){
+  const btn=document.createElement("button");btn.className="item"+(selected===entry?" selected":"");
+  btn.textContent=entry.data.name+" · "+entry.data.kind;
+  btn.onclick=()=>select(entry);
+  node.append(btn);
+ }
+}
+function select(entry){
+ selected=entry||null;
+ if(entry)gizmo.attach(entry.root);else gizmo.detach();
+ listObjects();drawFields();
+}
+function drawFields(refresh=true){
+ if(!selected)return;
+ if(refresh)syncObject(selected);
+ const el=$("fields");el.replaceChildren();const item=selected.data;
+ const textField=(label,key,type="text")=>{
+   const l=document.createElement("label");l.textContent=label;el.append(l);
+   const input=document.createElement("input");input.type=type;input.value=item[key]||"";
+   input.onchange=()=>{
+     const prior=item[key];item[key]=input.value;
+     if(!validObject(item)){item[key]=prior;status("Campo inválido");drawFields(false);return}
+     if(key==="color")selected.root.traverse(n=>{if(n.isMesh&&n.material?.color)n.material.color.set(item.color)});
+     if(key==="asset"&&item.kind==="glb"){loadAsset(selected.root,item.asset)}
+     listObjects();
+   };el.append(input);
+ };
+ textField("Nome","name");textField("Cor hexadecimal","color");if(item.kind==="glb")textField("Caminho GLB no projeto","asset");
+ const sections=[["Posição","position"],["Rotação (graus no painel)","rotation"],["Escala","scale"]];
+ for(const [label,key] of sections){
+  const l=document.createElement("label");l.textContent=label;el.append(l);
+  const row=document.createElement("div");row.className="row";el.append(row);
+  for(let i=0;i<3;i++){
+   const input=document.createElement("input");input.type="number";input.step=key==="rotation"?"1":".1";input.title=["X","Y","Z"][i];
+   input.value=key==="rotation"?(item[key][i]*180/Math.PI).toFixed(1):item[key][i].toFixed(2);
+   input.onchange=()=>{
+     const value=Number(input.value);const previous=item[key][i];
+     item[key][i]=key==="rotation"?value*Math.PI/180:value;
+     if(!validObject(item)){item[key][i]=previous;status("Transformação inválida");return}
+     applyTransform(selected.root,item);status("Transformação aplicada");
+   };row.append(input)
+  }
+ }
+ const kind=document.createElement("p");kind.className="help";kind.textContent="Tipo: "+item.kind+" · ID: "+item.id;el.append(kind);
+}
+function makeId(){let id;do{id="obj-"+idSeed++}while(objects.has(id));return id}
+function spawn(kind){const id=makeId();const entry=objectData(id,kind);entry.position=[Math.round(orbit.target.x),0,Math.round(orbit.target.z)];addItem(entry);select(objects.get(id));status("Objeto inserido: "+kind)}
+function duplicate(){
+ if(!selected)return;syncObject(selected);
+ const data=structuredClone(selected.data);data.id=makeId();data.name+=" CÓPIA";data.position[0]+=5;
+ addItem(data);select(objects.get(data.id));status("Objeto duplicado");
+}
+function removeSelected(){if(!selected)return;const entry=selected;select(null);scene.remove(entry.root);entry.root.traverse(n=>{n.geometry?.dispose();if(n.material){const arr=Array.isArray(n.material)?n.material:[n.material];arr.forEach(m=>m.dispose())}});objects.delete(entry.data.id);listObjects();$("fields").textContent="Selecione um objeto.";status("Objeto excluído")}
+function getMap(){
+ for(const entry of objects.values())syncObject(entry);
+ return {schema_version:1,id:mapId,name:mapName,bounds:{width:220,depth:220},objects:[...objects.values()].map(e=>structuredClone(e.data))};
+}
+function loadMap(data){
+ if(!data||!Array.isArray(data.objects)||data.objects.length>300||new Set(data.objects.map(e=>e.id)).size!==data.objects.length||!data.objects.every(validObject))throw Error("Mapa inválido: objetos, ID ou dimensões");
+ select(null);
+ for(const entry of objects.values()){scene.remove(entry.root);entry.root.traverse(n=>{n.geometry?.dispose();if(n.material){const list=Array.isArray(n.material)?n.material:[n.material];list.forEach(m=>m.dispose())}})}
+ objects.clear();mapId=typeof data.id==="string"?data.id:"map";mapName=typeof data.name==="string"?data.name:"Mapa WMK";
+ data.objects.forEach(addItem);listObjects();$("fields").textContent="Selecione um objeto";status("Mapa importado: "+mapName);
+}
+function exportMap(){
+ const b=new Blob([JSON.stringify(getMap(),null,2)+"\n"],{type:"application/json"});const url=URL.createObjectURL(b);
+ const a=document.createElement("a");a.href=url;a.download="khepri9.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status("Mapa exportado · coloque em data/maps/khepri9.json");
+}
+function saveLayout(){
+ const layout={};document.querySelectorAll(".panel").forEach(el=>{layout[el.id]={x:el.offsetLeft,y:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight}});
+ try{localStorage.setItem("wmk-map-editor-layout",JSON.stringify(layout));localStorage.setItem("wmk-map-editor-data",JSON.stringify(getMap()));status("Layout e mapa salvos neste navegador")}catch(e){status("Falha ao salvar: "+e.message)}
+}
+function restoreLayout(){
+ try{const data=JSON.parse(localStorage.getItem("wmk-map-editor-layout")||"null");if(!data)return;
+ for(const [id,p] of Object.entries(data)){const el=$(id);if(!el)continue;el.style.left=p.x+"px";el.style.top=p.y+"px";el.style.width=p.w+"px";el.style.height=p.h+"px";el.style.right="auto";el.style.bottom="auto"}}catch(e){console.warn(e)}
+}
+let zIndex=10;
+document.querySelectorAll(".panel").forEach(panel=>{
+ const bar=panel.querySelector(".bar");
+ bar.addEventListener("pointerdown",e=>{
+ if(e.button!==0)return;e.preventDefault();bar.setPointerCapture(e.pointerId);
+ panel.style.zIndex=String(++zIndex);const x=e.clientX,y=e.clientY,originX=panel.offsetLeft,originY=panel.offsetTop;
+ const move=ev=>{panel.style.left=Math.max(0,originX+ev.clientX-x)+"px";panel.style.top=Math.max(0,originY+ev.clientY-y)+"px";panel.style.right="auto";panel.style.bottom="auto"};
+ const done=()=>{bar.removeEventListener("pointermove",move);bar.removeEventListener("pointerup",done)};
+ bar.addEventListener("pointermove",move);bar.addEventListener("pointerup",done,{once:true});
+ });
+});
+renderer.domElement.addEventListener("pointerdown",e=>{
+ if(e.button!==0||gizmo.dragging)return;
+ const rect=renderer.domElement.getBoundingClientRect();
+ pointer.x=((e.clientX-rect.left)/rect.width)*2-1;pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+ raycaster.setFromCamera(pointer,camera);
+ const meshes=[...objects.values()].flatMap(entry=>{const arr=[];entry.root.traverse(n=>{if(n.isMesh&&n.visible)arr.push(n)});return arr});
+ const hits=raycaster.intersectObjects(meshes,false);
+ if(!hits.length)return;
+ const entry=[...objects.values()].find(x=>{let found=false;x.root.traverse(n=>{if(n===hits[0].object)found=true});return found});
+ if(entry)select(entry);
+});
+$("move").onclick=()=>gizmo.setMode("translate");
+$("rotate").onclick=()=>gizmo.setMode("rotate");
+$("scale").onclick=()=>gizmo.setMode("scale");
+$("duplicate").onclick=duplicate;$("delete").onclick=removeSelected;
+$("addBuilding").onclick=()=>spawn("building");$("addRock").onclick=()=>spawn("rock");$("addTower").onclick=()=>spawn("tower");$("addPlatform").onclick=()=>spawn("platform");
+$("save").onclick=saveLayout;$("export").onclick=exportMap;
+$("importMap").onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{if(file.size>2_000_000)throw Error("Arquivo muito grande");loadMap(JSON.parse(await file.text()))}catch(error){status("Importação recusada: "+error.message)}e.target.value=""};
+$("glb").onchange=async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ try{
+ if(file.size>25_000_000)throw Error("GLB acima de 25 MB");
+ const bytes=await file.arrayBuffer();
+ loader.parse(bytes,"",gltf=>{
+   const id=makeId(),data=objectData(id,"glb",file.name);data.asset="assets/models/"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+   const root=addItem(data),entry=objects.get(id);
+   root.clear();root.add(gltf.scene);select(entry);status("Prévia GLB importada. Copie o GLB para "+data.asset);
+ },error=>status("GLB inválido: "+error.message));
+ }catch(error){status(error.message)}e.target.value="";
+};
+window.addEventListener("keydown",e=>{
+ if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName))return;
+ const ctrl=e.ctrlKey||e.metaKey;
+ if(ctrl&&e.code==="KeyD"){e.preventDefault();duplicate()}
+ else if(e.code==="Delete"){removeSelected()}
+ else if(e.code==="KeyG")gizmo.setMode("translate");
+ else if(e.code==="KeyR")gizmo.setMode("rotate");
+ else if(e.code==="KeyS"&&!ctrl)gizmo.setMode("scale");
+});
+function render(){
+ requestAnimationFrame(render);orbit.update();
+ const width=renderer.domElement.clientWidth,height=renderer.domElement.clientHeight;
+ if(width&&height&&(renderer.domElement.width!==Math.floor(width*renderer.getPixelRatio())||renderer.domElement.height!==Math.floor(height*renderer.getPixelRatio()))){
+ renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
+ }
+ renderer.render(scene,camera);
+}
+async function initialize(){
+ restoreLayout();
+ let data=null;
+ try{const response=await fetch("./data/maps/khepri9.json");if(response.ok)data=await response.json()}catch(e){console.warn(e)}
+ if(!data)data={schema_version:1,id:"khepri9",name:"Khepri-9",objects:[]};
+ try{loadMap(data)}catch(e){status("Mapa inicial inválido: "+e.message)}
+ render();
+}
+initialize();
+</script></body></html>
