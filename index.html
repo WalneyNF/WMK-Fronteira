@@ -827,6 +827,7 @@
     </div>
 
     <div id="reticle"></div>
+    <div id="squadHud" class="hud-panel" style="position:absolute;top:105px;left:22px;padding:10px;font-size:11px;min-width:180px"></div>
 
     <div class="hud-bottom">
       <div class="hud-panel status-panel">
@@ -855,7 +856,7 @@
     </div>
 
     <div class="controls-hint">
-      WASD mover · Mouse mirar · Clique disparar · Q transformar · Shift impulso · E cúpula · Esc pausar
+      WASD mover · Mouse mirar · Clique disparar · Q transformar · Shift impulso · E cúpula · Tab trocar unidade · Esc pausar
     </div>
   </div>
 
@@ -956,6 +957,7 @@
       bossWrap: document.getElementById("bossWrap"),
       bossTitle: document.getElementById("bossTitle"),
       bossFill: document.getElementById("bossFill"),
+      squadHud: document.getElementById("squadHud"),
 
       resultTitle: document.getElementById("resultTitle"),
       resultCopy: document.getElementById("resultCopy"),
@@ -996,6 +998,7 @@
     let selectedFaction = "aurora";
     let currentFaction = "aurora";
     let player = null;
+    let squad = [];
     let enemies = [];
     let relays = [];
     let shots = [];
@@ -1601,8 +1604,20 @@
       player.guardVisual.visible = false;
       player.group.add(player.guardVisual);
 
+      player.unitName = "COMANDANTE"; player.maxHealth = 100;
+      squad = [player];
       world.add(player.group);
-
+      for (const cfg of [{name:"ESCOLTA",x:-9,z:36,hp:120},{name:"VANGUARDA",x:9,z:36,hp:145}]) {
+        const group = new THREE.Group(); group.position.set(cfg.x,0,cfg.z);
+        const mechModel = createMech(currentFaction), vehicleModel = createVehicle(currentFaction);
+        vehicleModel.visible = false; group.add(mechModel, vehicleModel);
+        const guardVisual = new THREE.Mesh(new THREE.TorusGeometry(2.55,.075,8,44),new THREE.MeshBasicMaterial({color:teams[currentFaction].glow}));
+        guardVisual.visible = false; group.add(guardVisual);
+        squad.push({unitName:cfg.name,group,mechModel,vehicleModel,guardVisual,customModel:null,mixer:null,
+          yaw:0,vehicleMode:false,health:cfg.hp,maxHealth:cfg.hp,shield:100,heat:0,fireCooldown:0,
+          dashTime:0,dashCooldown:0,guardTime:0,guardCooldown:0,lastDamage:-10,moveBlend:0});
+        world.add(group);
+      }
       if (assetTemplate) installImportedModel();
 
       for (let i = 0; i < 4; i++) {
@@ -1844,6 +1859,53 @@
       player.guardCooldown = 10;
       player.guardVisual.visible = true;
       showToast("CÚPULA DEFENSIVA ATIVA");
+    }
+
+
+    function livingSquad(){return squad.filter(u=>u.health>0)}
+    function selectNextUnit(){
+      if(state!=="playing"||!player)return;
+      const units=livingSquad();
+      if(units.length<2){showToast("SEM OUTRA UNIDADE DISPONÍVEL");return}
+      player=units[(units.indexOf(player)+1)%units.length];
+      firing=false; updateCamera(1);updateHud();showToast("ASSUMINDO: "+player.unitName);
+    }
+    function squadAI(dt){
+      for(const unit of squad){
+        if(unit===player||unit.health<=0)continue;
+        unit.fireCooldown=Math.max(0,unit.fireCooldown-dt);
+        unit.heat=Math.max(0,unit.heat-dt*22);
+        if(gameTime-unit.lastDamage>2.7)unit.shield=Math.min(100,unit.shield+dt*9);
+        let target=null,best=60;
+        for(const enemy of enemies){
+          const distance=unit.group.position.distanceTo(enemy.group.position);
+          if(distance<best){best=distance;target=enemy}
+        }
+        if(!target)continue;
+        unit.yaw=Math.atan2(target.group.position.x-unit.group.position.x,unit.group.position.z-target.group.position.z);
+        unit.group.rotation.y=unit.yaw;
+        if(unit.fireCooldown<=0&&unit.heat<92){
+          const origin=unit.group.position.clone().add(new THREE.Vector3(0,2.5,0));
+          addShot(origin,target.group.position.clone().sub(origin).normalize(),false,teams[currentFaction].damage*.7,48);
+          unit.fireCooldown=1.3;unit.heat+=10;
+        }
+      }
+    }
+    function damageSquadUnit(unit,amount){
+      if(!unit||unit.health<=0||state!=="playing")return;
+      if(unit.guardTime>0)amount*=.32;
+      const absorbed=Math.min(unit.shield,amount);
+      unit.shield-=absorbed;unit.health=Math.max(0,unit.health-amount+absorbed);
+      unit.lastDamage=gameTime;
+      if(unit.health<=0){
+        unit.group.visible=false;
+        createExplosion(unit.group.position.clone(),teams[currentFaction].glow,.9);
+        if(unit===player){
+          const survivor=livingSquad()[0];
+          if(survivor){player=survivor;firing=false;updateCamera(1);showToast("UNIDADE DESTRUÍDA · ASSUMINDO "+player.unitName)}
+          else finishCampaign(false);
+        }
+      }
     }
 
     function updatePlayer(dt) {
@@ -2114,13 +2176,10 @@
           remove = true;
         }
 
-        if (!remove && shot.hostile && player) {
-          const target = player.group.position.clone();
-          target.y += player.vehicleMode ? 1.2 : 2.2;
-
-          if (position.distanceTo(target) < 2.55) {
-            damagePlayer(shot.damage);
-            remove = true;
+        if(!remove&&shot.hostile){
+          for(const unit of livingSquad()){
+            const target=unit.group.position.clone();target.y+=unit.vehicleMode?1.2:2.2;
+            if(position.distanceTo(target)<2.55){damageSquadUnit(unit,shot.damage);remove=true;break}
           }
         }
 
@@ -2232,23 +2291,7 @@
       }
     }
 
-    function damagePlayer(amount) {
-      if (!player || state !== "playing") return;
-
-      if (player.guardTime > 0) {
-        amount *= 0.32;
-      }
-
-      const absorbed = Math.min(player.shield, amount);
-      player.shield -= absorbed;
-      player.health -= amount - absorbed;
-      player.lastDamage = gameTime;
-
-      if (player.health <= 0) {
-        player.health = 0;
-        finishCampaign(false);
-      }
-    }
+    function damagePlayer(amount){damageSquadUnit(player,amount)}
 
     function updateHud() {
       if (!player) return;
@@ -2274,7 +2317,7 @@
         .map((relay) => `<span class="pip ${relay.alive ? "live" : "done"}"></span>`)
         .join("");
 
-      ui.healthFill.style.width = `${Math.max(0, player.health)}%`;
+      ui.healthFill.style.width = `${Math.max(0, player.health/(player.maxHealth||100)*100)}%`;
       ui.shieldFill.style.width = `${Math.max(0, player.shield)}%`;
       ui.heatFill.style.width = `${Math.max(0, player.heat)}%`;
 
@@ -2284,6 +2327,7 @@
 
       ui.heatFill.classList.toggle("hot", player.heat > 72);
 
+      ui.squadHud.textContent = "TAB · ESQUADRÃO | " + squad.map(u=>(u===player?"▶ ":"")+u.unitName+" "+Math.ceil(u.health)+"HP").join(" · ");
       ui.modeText.textContent = player.vehicleMode
         ? "FORMA: VEÍCULO"
         : "FORMA: MECHA";
@@ -2313,6 +2357,7 @@
       gameTime += dt;
 
       updatePlayer(dt);
+      squadAI(dt);
       updateCamera(dt);
 
       if (firing) fireWeapon();
@@ -2424,6 +2469,7 @@
       ui.menu.classList.remove("hidden");
 
       player = null;
+      squad = [];
       enemies = [];
       relays = [];
       shots = [];
@@ -2534,7 +2580,7 @@
 
     window.addEventListener("keydown", (event) => {
       if (
-        ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)
+        ["Space", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)
       ) {
         event.preventDefault();
       }
@@ -2543,6 +2589,7 @@
 
       if (state !== "playing" || event.repeat) return;
 
+      if (event.code === "Tab") selectNextUnit();
       if (event.code === "KeyQ") toggleTransform();
       if (event.code === "ShiftLeft" || event.code === "ShiftRight") useDash();
       if (event.code === "KeyE") useGuard();
