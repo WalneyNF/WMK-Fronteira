@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "notes": "Dados iniciais da V0.3. A configuração pode ser ajustada individualmente; aeronaves usam voo simplificado.",
+  "schema_version": 2,
+  "notes": "V0.4: configuração por unidade de armamento e comportamento. Os parâmetros usam unidades de jogo, não medidas físicas.",
   "units": [
     {
       "id": "commander",
@@ -15,7 +15,18 @@
       "transform": true,
       "cameraDistance": 12.4,
       "aiRange": 60,
-      "description": "Unidade versátil transformável"
+      "description": "Unidade versátil transformável",
+      "weapon": {
+        "id": "pulse",
+        "label": "CANHÃO DE PULSO",
+        "damage": 2.6,
+        "cooldown": 0.16,
+        "heat": 8.5,
+        "shotSpeed": 57,
+        "pellets": 1,
+        "spread": 0,
+        "range": 100
+      }
     },
     {
       "id": "infantry",
@@ -30,7 +41,18 @@
       "transform": false,
       "cameraDistance": 7,
       "aiRange": 45,
-      "description": "Infantaria de assalto em terceira pessoa"
+      "description": "Infantaria de assalto em terceira pessoa",
+      "weapon": {
+        "id": "rifle",
+        "label": "FUZIL PLASMA",
+        "damage": 2,
+        "cooldown": 0.24,
+        "heat": 5,
+        "shotSpeed": 64,
+        "pellets": 1,
+        "spread": 0.012,
+        "range": 75
+      }
     },
     {
       "id": "hover",
@@ -45,7 +67,18 @@
       "transform": false,
       "cameraDistance": 17,
       "aiRange": 68,
-      "description": "Blindado de ataque e sustentação antigravidade"
+      "description": "Blindado de ataque e sustentação antigravidade",
+      "weapon": {
+        "id": "heavy",
+        "label": "CANHÃO PESADO",
+        "damage": 8.5,
+        "cooldown": 1.15,
+        "heat": 25,
+        "shotSpeed": 47,
+        "pellets": 1,
+        "spread": 0.006,
+        "range": 110
+      }
     },
     {
       "id": "fighter",
@@ -60,7 +93,18 @@
       "transform": false,
       "cameraDistance": 21,
       "aiRange": 80,
-      "description": "Caça veloz com movimento planar e altitude fixa inicial"
+      "description": "Caça veloz com movimento planar e altitude fixa inicial",
+      "weapon": {
+        "id": "dual",
+        "label": "CANHÕES DUPLOS",
+        "damage": 3.2,
+        "cooldown": 0.23,
+        "heat": 10,
+        "shotSpeed": 82,
+        "pellets": 2,
+        "spread": 0.028,
+        "range": 130
+      }
     },
     {
       "id": "turret",
@@ -75,7 +119,18 @@
       "transform": false,
       "cameraDistance": 13,
       "aiRange": 85,
-      "description": "Defesa estática com giro da mira"
+      "description": "Defesa estática com giro da mira",
+      "weapon": {
+        "id": "turret",
+        "label": "METRALHADORA DEFENSIVA",
+        "damage": 2.8,
+        "cooldown": 0.11,
+        "heat": 4.2,
+        "shotSpeed": 69,
+        "pellets": 1,
+        "spread": 0.015,
+        "range": 120
+      }
     }
   ]
 }
