@@ -48,5 +48,14 @@ A primeira abertura requer conexão à internet para carregar o **Three.js 0.160
 
 Consulte [pesquisa de referências](pesquisa.html) e [roadmap](roadmap.html).
 
-## Direitos e licenças
-O repositório ainda não contém licença identificada. **Não atribuir MIT automaticamente a código de terceiros** sem confirmar a origem e as permissões de distribuição. Quando confirmadas, publicar `LICENSE` indicando corretamente autores e direitos aplicáveis.
+## Licença MIT e créditos
+
+**Copyright © 2026 Walney Moreira Klein** — [walneyk@hotmail.com](mailto:walneyk@hotmail.com).
+
+O projeto é disponibilizado sob a **licença MIT**. Consulte o texto integral em [LICENSE](LICENSE). A licença permite uso, modificação, redistribuição e uso comercial, desde que o aviso de copyright e a licença acompanhem as cópias ou partes substanciais.
+
+**Atenção à proveniência:** a licença MIT aplica-se apenas a partes do projeto sobre as quais o titular possui direitos ou autorização para sublicenciar. A biblioteca Three.js, modelos GLB importados e outros componentes de terceiros conservam suas respectivas licenças. Caso a versão inicial tenha código de terceiros, é necessário conferir as condições originais e preservar os avisos correspondentes.
+
+## Ideias para expansão
+
+A prioridade é manter a jogabilidade estável e criar um sistema genérico de unidades, permitindo que o jogador troque, em tempo real, entre mechas, caças, veículos hover, soldados e torretas sem reiniciar a missão. Consulte [ideias.html](ideias.html) e [roadmap.html](roadmap.html).
