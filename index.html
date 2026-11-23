@@ -768,6 +768,7 @@
         <div class="menu-actions">
           <button id="startBtn" class="primary" type="button">Iniciar campanha</button>
           <a class="secondary" href="editor.html" style="text-decoration:none">Editor de unidades V0.5</a>
+          <a class="secondary" href="map-editor.html" style="text-decoration:none">Editor de mapas V0.6</a>
 
           <label class="secondary file-button">
             Importar modelo .GLB
@@ -1009,6 +1010,7 @@
     let squad = [];
     let squadPanelOpen = false;
     let unitCatalog = null;
+    let activeMapData = null;
     let squadOrder = "seguir";
     let enemies = [];
     let relays = [];
@@ -1468,6 +1470,55 @@
       camera.lookAt(4, 4, -10);
     }
 
+
+    function validMapElement(item) {
+      return !!item && typeof item.id==="string" && /^[a-zA-Z0-9_-]{1,60}$/.test(item.id) &&
+        ["building","rock","tower","platform","glb"].includes(item.kind) &&
+        [item.position,item.rotation,item.scale].every(v=>Array.isArray(v)&&v.length===3&&v.every(n=>Number.isFinite(n)&&Math.abs(n)<=10000)) &&
+        item.scale.every(v=>v>=.05&&v<=100) &&
+        (!item.asset || typeof item.asset==="string" && /^assets\/models\/[a-zA-Z0-9._/-]+\.glb$/i.test(item.asset) && !item.asset.includes(".."));
+    }
+    async function loadMapData() {
+      activeMapData=null;
+      try {
+        const response=await fetch("./data/maps/khepri9.json",{cache:"no-cache"});
+        if(!response.ok)throw Error("HTTP "+response.status);
+        const data=await response.json();
+        if(!Array.isArray(data.objects)||data.objects.length>300||
+          new Set(data.objects.map(o=>o.id)).size!==data.objects.length||
+          !data.objects.every(validMapElement))throw Error("Estrutura de mapa inválida");
+        activeMapData=data;
+      }catch(error) {
+        console.warn("Mapa JSON não carregado; cenário procedural padrão mantido",error);
+      }
+    }
+    function addMapElements() {
+      if(!activeMapData)return;
+      for(const element of activeMapData.objects) {
+        const root=new THREE.Group();
+        root.position.fromArray(element.position);
+        root.rotation.set(...element.rotation);
+        root.scale.fromArray(element.scale);
+        const color=new THREE.Color(/^#[0-9a-f]{6}$/i.test(element.color||"")?element.color:"#34839f");
+        const material=makeMaterial(color,{roughness:.5,metalness:.42});
+        let mesh=null;
+        if(element.kind==="building") mesh=new THREE.Mesh(new THREE.BoxGeometry(8,8,8),material);
+        else if(element.kind==="rock")mesh=new THREE.Mesh(new THREE.DodecahedronGeometry(3,0),material);
+        else if(element.kind==="tower")mesh=new THREE.Mesh(new THREE.CylinderGeometry(.9,1.5,11,8),material);
+        else if(element.kind==="platform")mesh=new THREE.Mesh(new THREE.CylinderGeometry(7,8,.6,24),material);
+        if(mesh) {
+          mesh.position.y=element.kind==="building"?4:element.kind==="rock"?2:element.kind==="tower"?5.5:.3;
+          root.add(mesh);
+        }
+        world.add(root);
+        if(element.kind==="glb"&&element.asset){
+          loader.load(element.asset,gltf=>{
+            if(world.children.includes(root))root.add(gltf.scene);
+          },undefined,error=>console.warn("GLB não encontrado: "+element.asset,error));
+        }
+      }
+    }
+
     function buildWorld() {
       clearGroup(world);
 
@@ -1506,6 +1557,7 @@
       grid.material.transparent = true;
       grid.material.opacity = 0.17;
       world.add(grid);
+      addMapElements();
 
       const platformMaterial = makeMaterial(0x253342, {
         metalness: 0.7,
@@ -2559,7 +2611,7 @@
     }
 
     async function startCampaign() {
-      await loadUnits();
+      await Promise.all([loadUnits(),loadMapData()]);
       currentFaction = selectedFaction;
 
       ui.menu.classList.add("hidden");
