@@ -47,11 +47,11 @@ function applyTransform(root,item){
 function objectData(id,kind="building",name=null){
  return {id,kind,name:name||"Novo "+kind,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:"#34839f"};
 }
-function addItem(item){
+function addItem(item,skipAsset=false){
  if(!validObject(item)||objects.has(item.id))throw new Error("Objeto inválido ou ID duplicado");
  const root=shape(item);root.userData.mapId=item.id;applyTransform(root,item);scene.add(root);
  objects.set(item.id,{data:structuredClone(item),root});
- if(item.kind==="glb"&&item.asset)loadAsset(root,item.asset);
+ if(item.kind==="glb"&&item.asset&&!skipAsset)loadAsset(root,item.asset);
  listObjects();return root;
 }
 const loader=new GLTFLoader();
@@ -181,7 +181,7 @@ $("glb").onchange=async e=>{
  const bytes=await file.arrayBuffer();
  loader.parse(bytes,"",gltf=>{
    const id=makeId(),data=objectData(id,"glb",file.name);data.asset="assets/models/"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-   const root=addItem(data),entry=objects.get(id);
+   const root=addItem(data,true),entry=objects.get(id);
    root.clear();root.add(gltf.scene);select(entry);status("Prévia GLB importada. Copie o GLB para "+data.asset);
  },error=>status("GLB inválido: "+error.message));
  }catch(error){status(error.message)}e.target.value="";
@@ -206,7 +206,11 @@ function render(){
 async function initialize(){
  restoreLayout();
  let data=null;
- try{const response=await fetch("./data/maps/khepri9.json");if(response.ok)data=await response.json()}catch(e){console.warn(e)}
+ try{
+   const local=JSON.parse(localStorage.getItem("wmk-map-editor-data")||"null");
+   if(local && Array.isArray(local.objects) && local.objects.every(validObject))data=local;
+ }catch(e){console.warn("Mapa local inválido",e)}
+ if(!data)try{const response=await fetch("./data/maps/khepri9.json");if(response.ok)data=await response.json()}catch(e){console.warn(e)}
  if(!data)data={schema_version:1,id:"khepri9",name:"Khepri-9",objects:[]};
  try{loadMap(data)}catch(e){status("Mapa inicial inválido: "+e.message)}
  render();
