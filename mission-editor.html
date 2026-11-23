@@ -1,0 +1,48 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WMK Fronteira — Editor de Missões V0.7</title><style>
+:root{color-scheme:dark;font-family:Segoe UI,system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;background:#07131f;color:#e7f5ff;font-size:13px}header{padding:14px 20px;background:#11283a;display:flex;gap:14px;align-items:center;justify-content:space-between;border-bottom:1px solid #35536a;flex-wrap:wrap}h1{font-size:19px;margin:0;color:#68e5ff}h2{font-size:15px;color:#69ddfa;margin:0 0 10px}button,.file{border:1px solid #426b82;background:#183c55;color:#e9f8ff;border-radius:6px;padding:9px;cursor:pointer;font:inherit}button:hover{border-color:#71ebff}input,textarea,select{width:100%;border:1px solid #315b71;border-radius:5px;padding:8px;background:#081a2a;color:#e8f5ff;font:inherit}label{display:block;margin:9px 0 4px;color:#b4d5e1}.actions{display:flex;gap:8px;flex-wrap:wrap}.workspace{display:grid;grid-template-columns:minmax(250px,.9fr) minmax(340px,1.4fr);gap:16px;padding:18px}.panel{border:1px solid #2e5871;background:#0e2234;border-radius:9px;padding:16px;min-width:0}.objective{padding:12px;border:1px solid #35627d;border-radius:8px;margin:9px 0;background:#122d43}.row{display:grid;grid-template-columns:1fr 115px;gap:10px}.muted{color:#9ab8c9;font-size:12px}.danger{background:#552631}.ok{color:#87f2ba}pre{white-space:pre-wrap;word-break:break-word;max-height:440px;overflow:auto;color:#acdbec}footer{padding:12px;text-align:center;color:#a1b9c9}.status{padding:10px 18px;color:#9be6f6}a{color:#86e6fc}@media(max-width:800px){.workspace{grid-template-columns:1fr}}
+</style></head><body><header><h1>WMK FRONTEIRA · EDITOR DE MISSÕES V0.7</h1><div class="actions"><button id="loadDefault">Restaurar exemplo</button><button id="saveLocal">Salvar navegador</button><button id="export">Exportar JSON</button><label class="file">Importar JSON<input type="file" id="import" accept=".json,application/json" hidden></label><a href="index.html">Voltar ao jogo</a></div></header>
+<main class="workspace"><section class="panel"><h2>CONFIGURAÇÃO DA OPERAÇÃO</h2><label>ID técnico</label><input id="missionId"><label>Título</label><input id="title"><label>Descrição</label><textarea id="description" rows="5"></textarea><p class="muted">O jogo utiliza <strong>data/missions/khepri9.json</strong> na inicialização. Salvar neste navegador não modifica o arquivo do jogo.</p><h2>REGRAS</h2><label><input id="spawnEnemies" type="checkbox" style="width:auto"> Gerar inimigos de patrulha (configuração planejada)</label><label><input id="spawnBoss" type="checkbox" style="width:auto"> Chefe após relés (configuração planejada)</label><p class="muted">Estas duas opções são preservadas no JSON. Na V0.7, o jogo mantém o comportamento original de geração de inimigos e chefe.</p></section>
+<section class="panel"><h2>OBJETIVOS</h2><div id="objectives"></div><div class="actions"><button id="addRelays">+ Destruir relés</button><button id="addBoss">+ Derrotar chefe</button></div><h2 style="margin-top:20px">PRÉVIA DO JSON</h2><pre id="preview"></pre></section></main><div id="status" class="status" role="status">Editor carregado.</div><footer>© 2026 Walney Moreira Klein — <a href="mailto:walneyk@hotmail.com">walneyk@hotmail.com</a> · Licença MIT</footer>
+<script>
+const $=id=>document.getElementById(id);
+const initial={schema_version:1,id:"cerco-khepri9",title:"Operação Núcleo Khepri-9",description:"Desative os três relés e derrube o Arconte de Cerco.",objectives:[{id:"relays",type:"destroy_relays",target:3,text:"Desative os três relés de cerco"},{id:"boss",type:"defeat_boss",target:1,text:"Derrube o Arconte de Cerco"}],settings:{spawnEnemies:true,spawnBossOnRelays:true}};
+let data=structuredClone(initial);
+function validate(m){return m&&/^[a-zA-Z0-9_-]{1,60}$/.test(m.id)&&typeof m.title==="string"&&m.title.length>0&&m.title.length<=120&&typeof m.description==="string"&&m.description.length<=1000&&Array.isArray(m.objectives)&&m.objectives.length>0&&m.objectives.length<=20&&new Set(m.objectives.map(o=>o.id)).size===m.objectives.length&&m.objectives.every(o=>/^[a-zA-Z0-9_-]{1,60}$/.test(o.id)&&["destroy_relays","defeat_boss"].includes(o.type)&&typeof o.text==="string"&&o.text.length>0&&o.text.length<=160&&Number.isInteger(o.target)&&o.target>=1&&o.target<=100)}
+function status(m){$("status").textContent=m}
+function render(){
+ $("missionId").value=data.id;$("title").value=data.title;$("description").value=data.description;
+ $("spawnEnemies").checked=!!data.settings?.spawnEnemies;$("spawnBoss").checked=!!data.settings?.spawnBossOnRelays;
+ const node=$("objectives");node.replaceChildren();
+ data.objectives.forEach((o,index)=>{
+ const div=document.createElement("div");div.className="objective";
+ const heading=document.createElement("strong");heading.textContent="OBJETIVO "+(index+1);div.append(heading);
+ function field(label,key,type="text"){
+ const l=document.createElement("label");l.textContent=label;div.append(l);
+ const input=document.createElement("input");input.type=type;input.value=o[key];
+ input.onchange=()=>{const old=o[key];o[key]=type==="number"?Number(input.value):input.value;
+ if(!validate(data)){o[key]=old;status("Valor inválido; alteração cancelada")}renderPreview()};div.append(input)
+ }
+ field("ID único","id");
+ const label=document.createElement("label");label.textContent="Tipo de objetivo";div.append(label);
+ const select=document.createElement("select");for(const [value,name] of [["destroy_relays","Destruir relés"],["defeat_boss","Derrotar chefe"]]){const option=document.createElement("option");option.value=value;option.textContent=name;select.append(option)}
+ select.value=o.type;select.onchange=()=>{o.type=select.value;renderPreview()};div.append(select);
+ field("Mensagem mostrada no HUD","text");field("Quantidade necessária","target","number");
+ const remove=document.createElement("button");remove.textContent="Excluir objetivo";remove.className="danger";remove.onclick=()=>{if(data.objectives.length<=1){status("Mantenha ao menos um objetivo");return}data.objectives.splice(index,1);render()};div.append(remove);
+ node.append(div)
+ });
+ renderPreview();
+}
+function renderPreview(){data.id=$("missionId").value;data.title=$("title").value;data.description=$("description").value;
+ data.settings={spawnEnemies:$("spawnEnemies").checked,spawnBossOnRelays:$("spawnBoss").checked};
+ $("preview").textContent=JSON.stringify(data,null,2)}
+for(const id of ["missionId","title","description","spawnEnemies","spawnBoss"])$(id).addEventListener("input",renderPreview);
+function add(type){if(data.objectives.length>=20){status("Limite de 20 objetivos");return}
+ const prefix=type==="defeat_boss"?"boss":"relays";let i=1;while(data.objectives.some(o=>o.id===prefix+"-"+i))i++;
+ data.objectives.push({id:prefix+"-"+i,type,target:type==="defeat_boss"?1:3,text:type==="defeat_boss"?"Derrote o chefe":"Desative os relés"});render()}
+$("addRelays").onclick=()=>add("destroy_relays");$("addBoss").onclick=()=>add("defeat_boss");
+$("loadDefault").onclick=()=>{data=structuredClone(initial);render();status("Exemplo restaurado")};
+$("saveLocal").onclick=()=>{renderPreview();if(!validate(data)){status("Missão inválida");return}try{localStorage.setItem("wmk-fronteira-mission-v07",JSON.stringify(data));status("Missão salva neste navegador")}catch(e){status("Erro: "+e.message)}};
+$("export").onclick=()=>{renderPreview();if(!validate(data)){status("Missão inválida; exportação cancelada");return}const blob=new Blob([JSON.stringify(data,null,2)+"\n"],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="khepri9.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status("JSON exportado. Copie para data/missions/khepri9.json")};
+$("import").onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{if(file.size>1024*1024)throw Error("Arquivo acima de 1 MB");const parsed=JSON.parse(await file.text());if(!validate(parsed))throw Error("Estrutura inválida");data=parsed;render();status("Importação concluída")}catch(error){status("Erro ao importar: "+error.message)}e.target.value=""};
+(async()=>{try{const saved=JSON.parse(localStorage.getItem("wmk-fronteira-mission-v07")||"null");if(validate(saved))data=saved;else{const r=await fetch("./data/missions/khepri9.json");if(r.ok){const m=await r.json();if(validate(m))data=m}}}catch(e){console.warn(e)}render()})();
+</script></body></html>
