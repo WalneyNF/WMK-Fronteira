@@ -4,7 +4,7 @@ Jogo experimental de combate sci-fi em terceira pessoa, construído com **HTML, 
 
 **Autor e manutenção da versão WMK:** Walney Moreira Klein — walneyk@hotmail.com
 
-> Estado atual: protótipo V0.6 com editor de mapas 3D, editor de unidades e esquadrão experimental multiclasse, armamento individual e ordens de IA; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
+> Estado atual: protótipo V0.7 com editor de missões e colisões básicas, editor de unidades e esquadrão experimental multiclasse, armamento individual e ordens de IA; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
 
 ## História
 Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora** (defesa, ataques rápidos) ou **Coro Nébula** (invasão, disparos mais fortes). Destrua três relés, enfrente ondas de interceptores e derrote o **Arconte de Cerco**.
@@ -144,3 +144,15 @@ Modelos GLB de arquivos locais não são embutidos no JSON: copie seus modelos p
 ### ZIP mais recente
 
 O GitHub disponibiliza um pacote da branch principal em https://github.com/WalneyNF/WMK-Fronteira/archive/refs/heads/main.zip . O pacote é gerado pelo GitHub e inclui os arquivos atualmente publicados. Recomenda-se um servidor HTTP local para que importações ES Modules e leitura de JSON funcionem.
+
+## V0.7 — Colisões e Editor de Missões
+
+O jogo passou a usar **colisões planares simplificadas** com edifícios, rochas e torres definidos em `data/maps/khepri9.json`. O movimento em X/Z é bloqueado ao entrar nos raios aproximados dos obstáculos; modelos GLB e plataformas ainda não participam do sistema de colisão. Não há física 3D realista, navegação inteligente que contorne paredes ou colisão dos projéteis com obstáculos.
+
+Abra `http://localhost:8000/mission-editor.html` para editar o título da operação, descrição e objetivos de **destruir relés** ou **derrotar chefe**. É possível importar/exportar JSON e salvar uma versão no navegador. Para usar uma missão no jogo, exporte o arquivo como `khepri9.json` e substitua `data/missions/khepri9.json` no projeto. Os textos dos objetivos são carregados pelo jogo na inicialização. O fluxo da missão ainda utiliza as regras originais de combate: destruir relés para gerar o chefe e derrotá-lo para concluir. As opções de geração de inimigos/chefe são documentadas no JSON, mas ainda não alteram o runtime.
+
+**Atenção:** o editor permite objetivos em sequência, porém a V0.7 implementa apenas a exibição contextual dos objetivos suportados. Novos tipos de missão, condições de vitória arbitrárias, gatilhos, NPCs e marcadores de navegação ainda dependem de implementação posterior.
+
+- [Editor de missões](mission-editor.html)
+- [Missão JSON de demonstração](data/missions/khepri9.json)
+- [Editor de mapas](map-editor.html)
