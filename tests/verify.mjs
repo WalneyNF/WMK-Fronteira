@@ -30,5 +30,22 @@ for(const id of ['squadHud','unitSelector','unitCards','healthFill','shieldFill'
   assert.ok(html.includes('id="'+id+'"'),'Elemento ausente: '+id);
 for(const name of ['loadUnits','fireUnitWeapon','fireWeapon','squadAI','cycleSquadOrder','selectNextUnit','toggleSquadPanel'])
   assert.ok(html.includes('function '+name+'(')||html.includes('async function '+name+'('),'Função ausente: '+name);
-console.log('OK: JavaScript sintaticamente válido, 5 unidades, 5 armas, HUD e funções principais.');
+const mapEditor=readFileSync(new URL('../map-editor.html',import.meta.url),'utf8');
+const mapJson=JSON.parse(readFileSync(new URL('../data/maps/khepri9.json',import.meta.url),'utf8'));
+const mapScript=mapEditor.match(/<script type="module">([\\s\\S]*?)<\\/script>/);
+assert.ok(mapScript,'Editor de mapas: script não encontrado');
+new vm.Script(mapScript[1].replace(/^\\s*import\\s+.*?;\\s*$/gm,''),{filename:'map-editor.html'});
+assert.equal(mapJson.schema_version,1);
+assert.ok(Array.isArray(mapJson.objects)&&mapJson.objects.length>0);
+const mapIds=new Set();
+for(const obj of mapJson.objects){
+  assert.ok(!mapIds.has(obj.id),'Objeto com ID duplicado: '+obj.id);
+  mapIds.add(obj.id);
+  assert.ok(['building','rock','tower','platform','glb'].includes(obj.kind));
+  for(const key of ['position','rotation','scale'])
+    assert.ok(Array.isArray(obj[key])&&obj[key].length===3&&obj[key].every(Number.isFinite));
+}
+assert.ok(html.includes('href="map-editor.html"'));
+assert.ok(html.includes('function addMapElements()'));
+console.log('OK: JavaScript válido, 5 unidades, 5 armas, editor de mapas e JSON de cenário.');
 console.log('Atenção: não testa renderização WebGL, física, colisões nem jogabilidade no navegador.');
