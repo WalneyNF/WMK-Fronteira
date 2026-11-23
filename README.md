@@ -4,7 +4,7 @@ Jogo experimental de combate sci-fi em terceira pessoa, construído com **HTML, 
 
 **Autor e manutenção da versão WMK:** Walney Moreira Klein — walneyk@hotmail.com
 
-> Estado atual: protótipo V0.4 com esquadrão experimental multiclasse, armamento individual e ordens de IA; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
+> Estado atual: protótipo V0.5 com editor de unidades e esquadrão experimental multiclasse, armamento individual e ordens de IA; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
 
 ## História
 Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora** (defesa, ataques rápidos) ou **Coro Nébula** (invasão, disparos mais fortes). Destrua três relés, enfrente ondas de interceptores e derrote o **Arconte de Cerco**.
@@ -46,7 +46,8 @@ Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora**
 A primeira abertura requer conexão à internet para carregar o **Three.js 0.160.0** via CDN. Navegador com WebGL e suporte a JavaScript ES Modules é necessário. O jogo é direcionado a desktop com teclado e mouse.
 
 ## Arquivos
-- `index.html` — protótipo original de jogo, concentrado em um arquivo.
+- `index.html` — jogo em desenvolvimento, concentrado em um arquivo.
+- `editor.html` — editor visual independente com painéis móveis, atributos, armas e prévia 2D conceitual.
 - `pesquisa.html` — estudo de referências e concorrentes.
 - `roadmap.html` — plano de versões e prioridades.
 
@@ -94,3 +95,18 @@ node tests/verify.mjs
 ```
 
 O script confere sintaxe JavaScript, estrutura das cinco unidades, armas e elementos essenciais do HUD. **Não substitui testes em navegador WebGL**. Recomenda-se também verificar a campanha jogável em servidor HTTP (`py -m http.server 8000`).
+
+## V0.5 — Editor de unidades e armamentos
+
+Abra [editor.html](editor.html) no mesmo servidor HTTP do jogo. O editor permite editar os cinco tipos existentes, duplicar unidades, ajustar estatísticas, armas, alcance de IA e câmera, exportar/importar `units.json`, salvar os dados no navegador e arrastar/redimensionar painéis.
+
+**Fluxo para usar as mudanças no jogo:**
+
+1. Abra `http://localhost:8000/editor.html` e edite as unidades.
+2. Clique em **Exportar units.json**.
+3. Copie o arquivo exportado para `data/units.json`, substituindo o existente (faça backup primeiro).
+4. Recarregue a página `index.html` e inicie uma campanha nova.
+
+O jogo suporta **5 a 24 unidades no catálogo**, exige que a primeira seja mecha e que todos os IDs sejam únicos. No editor é possível duplicar além do limite, mas o jogo rejeitará catálogos fora dessas regras; não são mudanças em tempo real na partida. O desenho do editor é uma **prévia 2D conceitual**, não renderização real do modelo GLB. Os painéis têm posição salva no navegador ao serem arrastados; dimensões alteradas por redimensionamento podem precisar ser salvas novamente ao mover o painel.
+
+**ZIP da versão corrente:** [Baixar branch main do GitHub](https://github.com/WalneyNF/WMK-Fronteira/archive/refs/heads/main.zip). O arquivo é produzido pelo próprio GitHub a partir dos arquivos publicados na branch principal.
