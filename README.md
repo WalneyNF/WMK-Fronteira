@@ -84,3 +84,13 @@ A prioridade é manter a jogabilidade estável e criar um sistema genérico de u
 Cada classe possui armamento independente via `data/units.json`. Os aliados usam as mesmas características de tiro, porém com dano reduzido pela IA. As ordens **seguir**, **defender** e **atacar** alteram o deslocamento básico dos bots móveis; a torre não se desloca. A inteligência artificial ainda usa decisões simples por distância e não possui navegação com desvio de obstáculos.
 
 **Teste recomendado:** com a campanha iniciada, pressione `F2` várias vezes, alterne entre as cinco classes e observe cadência e calor no HUD. Verifique também a persistência de HP e escudo ao alternar unidades. É uma versão experimental; nenhuma suíte de testes de navegador foi executada nesta atualização.
+
+## Verificação estática
+
+Com Node.js instalado, na pasta do projeto execute:
+
+```powershell
+node tests/verify.mjs
+```
+
+O script confere sintaxe JavaScript, estrutura das cinco unidades, armas e elementos essenciais do HUD. **Não substitui testes em navegador WebGL**. Recomenda-se também verificar a campanha jogável em servidor HTTP (`py -m http.server 8000`).
