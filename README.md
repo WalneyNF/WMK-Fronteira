@@ -4,14 +4,18 @@ Jogo experimental de combate sci-fi em terceira pessoa, construído com **HTML, 
 
 **Autor e manutenção da versão WMK:** Walney Moreira Klein — walneyk@hotmail.com
 
-> Estado atual: protótipo com esquadrão experimental de três mechas; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
+> Estado atual: protótipo V0.3 com esquadrão experimental multiclasse; ainda sem suíte de testes automatizados. Recursos planejados estão no roadmap, e não devem ser confundidos com recursos implementados.
 
 ## História
 Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora** (defesa, ataques rápidos) ou **Coro Nébula** (invasão, disparos mais fortes). Destrua três relés, enfrente ondas de interceptores e derrote o **Arconte de Cerco**.
 
 ## Recursos presentes no código inicial
 - Duas facções com estatísticas distintas;
-- Esquadrão experimental com três mechas aliados: tecla **Tab** troca a unidade controlada, aliados não controlados atiram por IA simples, HP individual e transferência automática quando a unidade ativa é destruída;
+- Esquadrão V0.3 com **5 unidades diferentes**: comandante mecha, soldado, tanque hover, caça e torre defensiva;
+- Configuração individual em [data/units.json](data/units.json): HP, escudo, velocidade, multiplicador de dano, câmera e alcance de IA;
+- **Tab** alterna a unidade controlada; **F1** abre o seletor clicável; **1–5** seleciona diretamente;
+- Aliados não controlados disparam automaticamente por IA simples e mantêm HP/posição/escudo próprios;
+- Caça com movimento horizontal simplificado e subida/descida por **C/X**; não é um modelo aerodinâmico realista;
 - Mecha transformável em veículo; movimento em terceira pessoa e mira com mouse;
 - Arma de pulso com aquecimento, escudo regenerativo, impulso e cúpula defensiva;
 - Três relés objetivos, inimigos, ondas, chefe, pontuação e tela de resultados;
@@ -25,7 +29,10 @@ Os relés de dobra ameaçam as colônias. Escolha uma facção: **Pacto Aurora**
 | Mouse | Mira |
 | Clique esquerdo | Atirar |
 | Q | Alternar mecha / veículo |
-| Tab | Trocar entre mechas aliados vivos |
+| Tab | Trocar entre unidades aliadas vivas |
+| 1 a 5 | Seleção direta de unidade |
+| F1 | Abrir/fechar painel de seleção |
+| C / X | Subir / descer quando assumir o caça |
 | Shift | Impulso |
 | E | Cúpula defensiva |
 | Esc | Pausar |
@@ -46,7 +53,7 @@ A primeira abertura requer conexão à internet para carregar o **Three.js 0.160
 1. Testar o fluxo inteiro no navegador, especialmente o novo sistema de troca entre mechas, e corrigir defeitos documentados.
 2. Modularizar código (entrada, combate, entidades, IA, interface e carregamento).
 3. Externalizar configurações em JSON validado.
-4. Expandir os três mechas para classes diferentes usando arquivos JSON por unidade; depois criar hangar, editor de missões/mapas e progressão.
+4. Evoluir os cinco tipos de unidade para animações, armas e controles próprios; depois criar hangar, editor de missões/mapas e progressão.
 
 Consulte [pesquisa de referências](pesquisa.html) e [roadmap](roadmap.html).
 
@@ -61,3 +68,12 @@ O projeto é disponibilizado sob a **licença MIT**. Consulte o texto integral e
 ## Ideias para expansão
 
 A prioridade é manter a jogabilidade estável e criar um sistema genérico de unidades, permitindo que o jogador troque, em tempo real, entre mechas, caças, veículos hover, soldados e torretas sem reiniciar a missão. Consulte [ideias.html](ideias.html) e [roadmap.html](roadmap.html).
+
+## Notas da V0.3 experimental
+
+- Execute por servidor HTTP local: abrir o HTML diretamente como `file://` pode impedir o carregamento de `data/units.json`.
+- O jogo usa configurações internas de segurança caso o JSON não carregue; confira o console.
+- Os modelos das classes ainda são geométricos/procedurais; a importação GLB continua legada e não configura automaticamente todas as classes.
+- O caça tem altitude controlável, mas ainda não possui física de voo, estol, decolagem/pouso ou combate aéreo dedicado.
+- A torre é uma unidade estática com disparo por mira da câmera; ainda não há turret tracking e rotação automática de torre independente.
+- A versão requer validação manual no navegador: a presença das funções no repositório não comprova a ausência de problemas em execução.
