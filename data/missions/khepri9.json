@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "cerco-khepri9",
+  "title": "Operação Núcleo Khepri-9",
+  "description": "Desative os três relés e derrube o Arconte de Cerco.",
+  "objectives": [
+    {
+      "id": "relays",
+      "type": "destroy_relays",
+      "target": 3,
+      "text": "Desative os três relés de cerco"
+    },
+    {
+      "id": "boss",
+      "type": "defeat_boss",
+      "target": 1,
+      "text": "Derrube o Arconte de Cerco"
+    }
+  ],
+  "settings": {
+    "spawnEnemies": true,
+    "spawnBossOnRelays": true
+  }
+}
