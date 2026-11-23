@@ -1963,7 +1963,7 @@
         if(unit===player||unit.health<=0)continue;
         unit.fireCooldown=Math.max(0,unit.fireCooldown-dt);
         unit.heat=Math.max(0,unit.heat-dt*22);
-        if(gameTime-unit.lastDamage>2.7)unit.shield=Math.min(100,unit.shield+dt*9);
+        if(gameTime-unit.lastDamage>2.7)unit.shield=Math.min(unit.maxShield||100,unit.shield+dt*9);
         let target=null,best=60;
         for(const enemy of enemies){
           const distance=unit.group.position.distanceTo(enemy.group.position);
@@ -2013,7 +2013,7 @@
       player.heat = Math.max(0, player.heat - dt * 22);
 
       if (gameTime - player.lastDamage > 2.7) {
-        player.shield = Math.min(100, player.shield + dt * 9);
+        player.shield = Math.min(player.maxShield || 100, player.shield + dt * 9);
       }
 
       let forwardInput =
@@ -2054,7 +2054,10 @@
       if (player.dashTime > 0) speed *= 2.55;
 
       player.group.position.addScaledVector(movement, speed * dt);
-      if(player.config.type==="fighter")player.group.position.y=8;
+      if(player.config.type==="fighter"){
+        const vertical=(keys.KeyC?1:0)-(keys.KeyX?1:0);
+        player.group.position.y=THREE.MathUtils.clamp(player.group.position.y+vertical*12*dt,3,40);
+      }
       player.group.position.x = THREE.MathUtils.clamp(
         player.group.position.x,
         -96,
@@ -2427,7 +2430,8 @@
         ? "cúpula pronta"
         : `cúpula ${player.guardCooldown.toFixed(1)}s`;
 
-      ui.abilityText.textContent = `Shift: ${dashText} · E: ${guardText}`;
+      ui.abilityText.textContent = `Shift: ${dashText} · E: ${guardText}` +
+        (player.config.type==="fighter" ? " · C subir / X descer" : "");
       ui.scoreText.textContent = `PONTOS ${String(score).padStart(6, "0")}`;
 
       if (bossEnemy && enemies.includes(bossEnemy)) {
@@ -2682,6 +2686,11 @@
       if(event.code==="F1"){toggleSquadPanel();return;}
       if(squadPanelOpen)return;
       if (event.code === "Tab") selectNextUnit();
+      const unitIndex=["Digit1","Digit2","Digit3","Digit4","Digit5"].indexOf(event.code);
+      if(unitIndex>=0 && squad[unitIndex] && squad[unitIndex].health>0){
+        player=squad[unitIndex];firing=false;updateCamera(1);updateHud();
+        showToast("ASSUMINDO: "+player.unitName);
+      }
       if (event.code === "KeyQ") toggleTransform();
       if (event.code === "ShiftLeft" || event.code === "ShiftRight") useDash();
       if (event.code === "KeyE") useGuard();
