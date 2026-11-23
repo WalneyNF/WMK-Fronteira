@@ -769,6 +769,7 @@
           <button id="startBtn" class="primary" type="button">Iniciar campanha</button>
           <a class="secondary" href="editor.html" style="text-decoration:none">Editor de unidades V0.5</a>
           <a class="secondary" href="map-editor.html" style="text-decoration:none">Editor de mapas V0.6</a>
+          <a class="secondary" href="mission-editor.html" style="text-decoration:none">Editor de missões V0.7</a>
 
           <label class="secondary file-button">
             Importar modelo .GLB
@@ -1011,6 +1012,8 @@
     let squadPanelOpen = false;
     let unitCatalog = null;
     let activeMapData = null;
+    let mapColliders = [];
+    let missionData = null;
     let squadOrder = "seguir";
     let enemies = [];
     let relays = [];
@@ -1492,7 +1495,51 @@
         console.warn("Mapa JSON não carregado; cenário procedural padrão mantido",error);
       }
     }
+    function objectCollisionRadius(element) {
+      if(element.kind==="platform"||element.kind==="glb")return 0;
+      const size=element.kind==="rock"?3:element.kind==="tower"?1.5:4;
+      return size*Math.max(element.scale[0],element.scale[2]);
+    }
+    function moveUnitWithCollision(unit,delta){
+      const p=unit.group.position;
+      const radius=unit.config?.type==="soldier"?.7:unit.config?.type==="hover"?2.7:1.5;
+      // Colisão no plano XZ, separando eixos para permitir deslizar junto às paredes.
+      for(const axis of ["x","z"]){
+        const proposed=p[axis]+delta[axis];
+        let blocked=false;
+        for(const obstacle of mapColliders){
+          if(Math.abs(p.y-obstacle.y)>obstacle.height+3)continue;
+          const x=axis==="x"?proposed:p.x, z=axis==="z"?proposed:p.z;
+          if(Math.hypot(x-obstacle.x,z-obstacle.z)<radius+obstacle.radius){blocked=true;break}
+        }
+        if(!blocked)p[axis]=proposed;
+      }
+    }
+    async function loadMissionData(){
+      missionData=null;
+      try{
+        const res=await fetch("./data/missions/khepri9.json",{cache:"no-cache"});
+        if(!res.ok)throw Error("HTTP "+res.status);
+        const data=await res.json();
+        if(!data||!Array.isArray(data.objectives)||data.objectives.length>20||
+          !data.objectives.every(o=>["destroy_relays","defeat_boss"].includes(o.type)&&
+          typeof o.text==="string"&&o.text.length<=160&&Number.isInteger(o.target)&&o.target>=1&&o.target<=100))
+          throw Error("Missão inválida");
+        missionData=data;
+      }catch(error){console.warn("Usando missão padrão",error)}
+    }
+    function missionObjectiveText(){
+      if(!missionData)return null;
+      const relaysDown=relays.filter(r=>!r.alive).length;
+      const remaining=relays.filter(r=>r.alive).length;
+      const objective=missionData.objectives.find(o=>o.type==="destroy_relays"&&relaysDown<o.target);
+      if(objective)return objective.text+" ("+relaysDown+"/"+objective.target+")";
+      const boss=missionData.objectives.find(o=>o.type==="defeat_boss");
+      if(boss&&bossEnemy)return boss.text;
+      return remaining===0?"Operação concluída":null;
+    }
     function addMapElements() {
+      mapColliders=[];
       if(!activeMapData)return;
       for(const element of activeMapData.objects) {
         const root=new THREE.Group();
@@ -1511,6 +1558,9 @@
           root.add(mesh);
         }
         world.add(root);
+        const radius=objectCollisionRadius(element);
+        if(radius>0)mapColliders.push({x:element.position[0],z:element.position[2],
+          y:element.position[1],radius,height:(element.kind==="tower"?11:element.kind==="building"?8:6)*element.scale[1]});
         if(element.kind==="glb"&&element.asset){
           loader.load(element.asset,gltf=>{
             if(world.children.includes(root))root.add(gltf.scene);
@@ -2037,7 +2087,7 @@
         if(destination&&unit.config.speed>0){
           const delta=destination.clone().sub(unit.group.position);delta.y=0;
           if(delta.lengthSq()>.01){
-            unit.group.position.addScaledVector(delta.normalize(),unit.config.speed*dt*.55);
+            moveUnitWithCollision(unit,delta.normalize().multiplyScalar(unit.config.speed*dt*.55));
             unit.group.position.x=THREE.MathUtils.clamp(unit.group.position.x,-96,96);
             unit.group.position.z=THREE.MathUtils.clamp(unit.group.position.z,-102,72);
           }
@@ -2133,7 +2183,7 @@
       let speed = player.vehicleMode ? (player.config.vehicleSpeed||22) : player.config.speed;
       if (player.dashTime > 0) speed *= 2.55;
 
-      player.group.position.addScaledVector(movement, speed * dt);
+      moveUnitWithCollision(player,movement.clone().multiplyScalar(speed*dt));
       if(player.config.type==="fighter"){
         const vertical=(keys.KeyC?1:0)-(keys.KeyX?1:0);
         player.group.position.y=THREE.MathUtils.clamp(player.group.position.y+vertical*12*dt,3,40);
@@ -2485,6 +2535,7 @@
         ui.objectiveText.textContent = "Operação concluída";
       }
 
+      ui.objectiveText.textContent=missionObjectiveText()||ui.objectiveText.textContent;
       ui.relayPips.innerHTML = relays
         .map((relay) => `<span class="pip ${relay.alive ? "live" : "done"}"></span>`)
         .join("");
@@ -2611,7 +2662,7 @@
     }
 
     async function startCampaign() {
-      await Promise.all([loadUnits(),loadMapData()]);
+      await Promise.all([loadUnits(),loadMapData(),loadMissionData()]);
       currentFaction = selectedFaction;
 
       ui.menu.classList.add("hidden");
@@ -2626,7 +2677,7 @@
       clearInput();
 
       requestMouseLock();
-      showToast("OPERAÇÃO INICIADA · DESTRUA OS TRÊS RELÉS");
+      showToast("OPERAÇÃO INICIADA · "+(missionData?.title||"DESTRUA OS TRÊS RELÉS"));
     }
 
     function goToMenu() {
